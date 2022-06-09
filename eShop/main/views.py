@@ -4,10 +4,10 @@ from django.urls import reverse_lazy
 from django.views.decorators.http import require_POST
 from django.views.generic import CreateView
 from django.contrib.auth.models import User,Group
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 import json
-from .models import Product
-from .forms import ProductForm
+from .models import *
+from .forms import *
 
 
 # Create your views here.
@@ -19,22 +19,39 @@ def index(request):
 
 
 def login(request):
-    if request.method == 'POST' and User.objects.filter(username=request.POST["username"]).exists():
-        logout(request)
-        usr = authenticate(request, username=request.POST['username'], password=request.POST['password'])
-        if usr is not None:
-            logindj(request, usr)
-            return redirect('home')
-    return render(request, 'main/login.html')
+    form = LoginForm(request.POST)
+
+    if form.is_valid():
+        username = form.cleaned_data["username"]
+        password = form.cleaned_data["password"]
+
+        user = authenticate(username=username, password=password)
+
+        if user is not None:
+            login(request, user)
+            return HttpResponseRedirect("/")
+    return render(request, "family/login.html",{"form":form})
 
 
 def register(request):
-    if request.method == 'POST' and not User.objects.filter(username=request.POST["username"]).exists():
-        vertobussy = User.objects.create_user(username=request.POST['username'],password=request.POST['password'],email=request.POST['email'])
-        vertobussy.save()
-        logindj(request,vertobussy)
-        return redirect('home')
-    return render(request, 'main/register.html')
+    if request.method == 'POST':
+        user_form = RegisterUser(request.POST)
+
+        if  user_form.is_valid():
+            user = User(email = user_form.cleaned_data["email"],
+                                            first_name=user_form.cleaned_data["first_name"],
+                                            last_name=user_form.cleaned_data["last_name"],
+                                            username=user_form.cleaned_data['username'])
+            user.set_password(user_form.cleaned_data["password"])
+            user.save()
+            return HttpResponseRedirect("/")
+        else:
+
+            return HttpResponseRedirect("/register")
+    else:
+        user_form = RegisterUser()
+
+    return render(request,"main/register.html",{"form":user_form})
 
 
 def about(request):

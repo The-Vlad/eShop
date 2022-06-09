@@ -1,5 +1,7 @@
 from .models import *
 from django.forms import ModelForm, TextInput, Textarea
+from django import forms
+from django.contrib.auth.models import User
 
 
 class EmployeeForm(ModelForm):
@@ -136,3 +138,31 @@ class OrderForm(ModelForm):
                 'placeholder': 'Введите ID клиента'
             })
         }
+
+
+class RegisterUser(forms.ModelForm):
+    password = forms.CharField(label="password", widget=forms.PasswordInput)
+    password2 = forms.CharField(label="Repeat password", widget=forms.PasswordInput)
+
+    class Meta:
+        model = User
+        fields = ('username', 'first_name', 'email')
+
+    def clean_password2(self):
+        cd = self.cleaned_data
+        if cd['password'] != cd['password2']:
+            raise forms.ValidationError('Passwords don\'t match.')
+        return cd['password2']
+
+    def save(self, commit=True):
+        # Save the provided password in hashed format
+        user = super().save(commit=False)
+        user.set_password(self.cleaned_data["password"])
+        if commit:
+            user.save()
+        return user
+
+
+class LoginForm(forms.Form):
+    username = forms.CharField(label="username", max_length=100)
+    password = forms.CharField(label="password", max_length=100, widget=forms.PasswordInput)
